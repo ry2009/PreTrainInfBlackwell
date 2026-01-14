@@ -5,3 +5,7 @@ reports/
 *.png
 *.json
 .DS_Store
+!artifacts/
+!artifacts/**/*.png
+!artifacts/**/*.json
+!artifacts/**/*.md
