@@ -1,0 +1,7 @@
+# Core
+numpy>=1.23
+matplotlib>=3.7
+tqdm>=4.66
+
+# Torch (CPU by default; swap to CUDA build as needed)
+torch>=2.2
