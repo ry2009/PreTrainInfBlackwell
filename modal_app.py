@@ -492,6 +492,8 @@ def run_safety_suite(
     n_heads: int = 4,
     train_steps: int = 600,
     probe_steps: int = 200,
+    probe_layers: int = 3,
+    distill_weight: float = 0.3,
     lr: float = 3e-4,
     target_fpr: float = 0.01,
     route_points: int = 25,
@@ -786,7 +788,8 @@ def run_safety_suite(
     for p in exchange_model.parameters():
         p.requires_grad = False
 
-    probe = nn.Linear(d_model, 1, device=device)
+    probe_dim = d_model * probe_layers
+    probe = nn.Linear(probe_dim, 1, device=device)
     opt_probe = torch.optim.AdamW(probe.parameters(), lr=lr)
     for _ in range(probe_steps):
         idx = torch.randint(0, train_exchange.shape[0], (batch_size,), device=device)
@@ -794,10 +797,14 @@ def run_safety_suite(
         y = train_labels[idx]
         opt_probe.zero_grad(set_to_none=True)
         with torch.no_grad():
-            _, hidden = exchange_model(x, return_hidden=True)
-            feat = hidden[-1].mean(dim=1)
+            ex_logits, hidden = exchange_model(x, return_hidden=True)
+            layers = hidden[-probe_layers:]
+            feat = torch.cat([h[:, 0, :] for h in layers], dim=-1)
+            soft_targets = torch.sigmoid(ex_logits.detach())
         logits = probe(feat).squeeze(-1)
-        loss = F.binary_cross_entropy_with_logits(logits, y)
+        hard_loss = F.binary_cross_entropy_with_logits(logits, y)
+        soft_loss = F.mse_loss(torch.sigmoid(logits), soft_targets)
+        loss = (1.0 - distill_weight) * hard_loss + distill_weight * soft_loss
         loss.backward()
         opt_probe.step()
 
@@ -807,7 +814,8 @@ def run_safety_suite(
             for i in range(0, data.shape[0], batch_size):
                 batch = data[i : i + batch_size]
                 _, hidden = exchange_model(batch, return_hidden=True)
-                feat = hidden[-1].mean(dim=1)
+                layers = hidden[-probe_layers:]
+                feat = torch.cat([h[:, 0, :] for h in layers], dim=-1)
                 logits = probe(feat).squeeze(-1)
                 scores.append(torch.sigmoid(logits).cpu())
         return torch.cat(scores)
@@ -859,7 +867,8 @@ def run_safety_suite(
     # probe head only (features cached)
     with torch.no_grad():
         _, hidden = exchange_model(test_exchange[:batch_size], return_hidden=True)
-        feat = hidden[-1].mean(dim=1)
+        layers = hidden[-probe_layers:]
+        feat = torch.cat([h[:, 0, :] for h in layers], dim=-1)
     torch.cuda.synchronize()
     start = time.time()
     for _ in range(100):
@@ -883,6 +892,8 @@ def run_safety_suite(
             "n_heads": n_heads,
             "train_steps": train_steps,
             "probe_steps": probe_steps,
+            "probe_layers": probe_layers,
+            "distill_weight": distill_weight,
             "target_fpr": target_fpr,
         },
         "metrics": {
@@ -1694,6 +1705,8 @@ def main(
     safety_samples: int = 5000,
     safety_steps: int = 600,
     safety_probe_steps: int = 200,
+    safety_probe_layers: int = 3,
+    safety_distill_weight: float = 0.3,
     safety_seq_len: int = 256,
 ):
     import json
@@ -1932,6 +1945,8 @@ def main(
             seq_len=safety_seq_len,
             train_steps=safety_steps,
             probe_steps=safety_probe_steps,
+            probe_layers=safety_probe_layers,
+            distill_weight=safety_distill_weight,
         )
         (out_dir / "safety_suite.json").write_text(json.dumps(safety_result, indent=2))
         print("Safety suite complete.")
