@@ -876,6 +876,32 @@ def run_safety_suite(
     torch.cuda.synchronize()
     probe_ms = (time.time() - start) * 1000 / 100
 
+    # Latency curve for cascade budgets
+    latency_curve = []
+    for entry in pareto:
+        latency_ms = probe_ms + entry["cost"] * exchange_ms
+        latency_curve.append(
+            {
+                "route_thr": entry["route_thr"],
+                "miss_rate": entry["miss_rate"],
+                "fpr": entry["fpr"],
+                "cost": entry["cost"],
+                "latency_ms": latency_ms,
+            }
+        )
+
+    # Budget controller: pick route threshold under latency caps
+    budget_fracs = [0.25, 0.5, 0.75, 1.0]
+    budget_curve = []
+    for frac in budget_fracs:
+        cap_ms = probe_ms + frac * exchange_ms
+        feasible = [p for p in latency_curve if p["latency_ms"] <= cap_ms + 1e-9]
+        if feasible:
+            chosen = min(feasible, key=lambda x: x["miss_rate"])
+        else:
+            chosen = min(latency_curve, key=lambda x: x["latency_ms"])
+        budget_curve.append({"cap_frac": frac, "cap_ms": cap_ms, "chosen": chosen})
+
     # Approx cascade latency
     cascade_ms = probe_ms + best_cascade["cost"] * exchange_ms
 
@@ -905,6 +931,8 @@ def run_safety_suite(
         },
         "thresholds": thresholds,
         "pareto": pareto,
+        "latency_curve": latency_curve,
+        "budget_curve": budget_curve,
         "latency_ms": {
             "input_only": input_ms,
             "output_only": output_ms,

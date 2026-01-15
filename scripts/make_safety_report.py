@@ -65,6 +65,38 @@ def main(path: str = "reports/safety_suite.json"):
     fig.savefig(out_dir / "safety_latency.png", dpi=180)
     plt.close(fig)
 
+    latency_curve = data.get("latency_curve", [])
+    if latency_curve:
+        fig, ax = plt.subplots(figsize=(7, 4))
+        ax.plot(
+            [p["latency_ms"] for p in latency_curve],
+            [p["miss_rate"] for p in latency_curve],
+            color="#E07A5F",
+        )
+        budget_curve = data.get("budget_curve", [])
+        for entry in budget_curve:
+            chosen = entry["chosen"]
+            ax.scatter(
+                chosen["latency_ms"],
+                chosen["miss_rate"],
+                color="#3D9970",
+                s=30,
+            )
+            ax.text(
+                chosen["latency_ms"],
+                chosen["miss_rate"],
+                f"{int(entry['cap_frac']*100)}%",
+                fontsize=8,
+                ha="left",
+                va="bottom",
+            )
+        ax.set_xlabel("Latency (ms)")
+        ax.set_ylabel("Miss rate (↓)")
+        ax.set_title("Safety Budget Controller")
+        fig.tight_layout()
+        fig.savefig(out_dir / "safety_budget.png", dpi=180)
+        plt.close(fig)
+
     # Simple poster
     fig = plt.figure(figsize=(12, 7))
     gs = fig.add_gridspec(2, 2, height_ratios=[1, 1])
@@ -75,10 +107,20 @@ def main(path: str = "reports/safety_suite.json"):
     ax1.set_ylabel("Miss rate (↓)")
 
     ax2 = fig.add_subplot(gs[0, 1])
-    ax2.plot([p["cost"] for p in pareto], [p["miss_rate"] for p in pareto], color="#E07A5F")
-    ax2.set_xlabel("Escalation cost")
-    ax2.set_ylabel("Miss rate (↓)")
-    ax2.set_title("Cascade Pareto")
+    if latency_curve:
+        ax2.plot(
+            [p["latency_ms"] for p in latency_curve],
+            [p["miss_rate"] for p in latency_curve],
+            color="#E07A5F",
+        )
+        ax2.set_xlabel("Latency (ms)")
+        ax2.set_ylabel("Miss rate (↓)")
+        ax2.set_title("Budget Controller")
+    else:
+        ax2.plot([p["cost"] for p in pareto], [p["miss_rate"] for p in pareto], color="#E07A5F")
+        ax2.set_xlabel("Escalation cost")
+        ax2.set_ylabel("Miss rate (↓)")
+        ax2.set_title("Cascade Pareto")
 
     ax3 = fig.add_subplot(gs[1, 0])
     ax3.bar(keys, [latency[k] for k in keys], color=["#9E9E9E", "#6C8EBF", "#3D9970", "#E07A5F"])
