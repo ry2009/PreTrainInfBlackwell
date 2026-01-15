@@ -101,6 +101,29 @@ modal run modal_app.py --runs=hybrid --steps=1200 --tokenization=byte --engram-b
 
 ---
 
+## Safety Suite (Exchange‑Aware + Probe‑Cascade)
+
+Demonstrates **exchange‑aware safety** with a **probe‑cascade** that preserves throughput. Uses a safe synthetic dataset (no harmful content) to model:
+
+- **Reconstruction attacks** (fragments assembled across context)
+- **Obfuscation attacks** (rule‑based encoding)
+
+Run on GPU:
+
+```bash
+modal run modal_app.py --runs=safety --no-benchmark --no-sweep --no-hybrid --safety --safety-samples=5000 --safety-steps=600 --safety-probe-steps=200 --safety-seq-len=256
+```
+
+Outputs:
+
+- `reports/safety_suite.json`
+- `reports/safety_exchange.png`
+- `reports/safety_pareto.png`
+- `reports/safety_latency.png`
+- `reports/safety_poster.png`
+
+---
+
 ## Twist Experiments
 
 ```bash

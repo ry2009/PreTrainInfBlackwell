@@ -97,12 +97,38 @@ def draw_mhc(path: Path):
     plt.close(fig)
 
 
+def draw_safety(path: Path):
+    fig, ax = plt.subplots(figsize=(8, 4))
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis("off")
+    b1 = box(ax, (0.05, 0.65), "Input", w=0.18)
+    b2 = box(ax, (0.30, 0.65), "Model\n(activations)", w=0.22, color="#e7f4ff")
+    b3 = box(ax, (0.62, 0.65), "Output", w=0.18)
+    b4 = box(ax, (0.30, 0.35), "Probe\n(stage‑1)", w=0.18, color="#f6e8ff")
+    b5 = box(ax, (0.55, 0.35), "Exchange\nClassifier", w=0.22, color="#fff3e6")
+    b6 = box(ax, (0.80, 0.35), "Decision", w=0.15)
+
+    arrow(ax, (0.23, 0.69), (0.30, 0.69))
+    arrow(ax, (0.52, 0.69), (0.62, 0.69))
+    arrow(ax, (0.41, 0.65), (0.39, 0.45))
+    arrow(ax, (0.71, 0.65), (0.66, 0.45))
+    arrow(ax, (0.48, 0.39), (0.55, 0.39))
+    arrow(ax, (0.77, 0.39), (0.80, 0.39))
+
+    ax.text(0.05, 0.12, "Probe‑cascade: exchange‑aware safety without throughput collapse", fontsize=10)
+    fig.tight_layout()
+    fig.savefig(path, dpi=160)
+    plt.close(fig)
+
+
 def main():
     reports = ROOT / "reports"
     reports.mkdir(parents=True, exist_ok=True)
     draw_hybrid(reports / "arch_hybrid.png")
     draw_engram(reports / "arch_engram.png")
     draw_mhc(reports / "arch_mhc.png")
+    draw_safety(reports / "arch_safety.png")
     print("Wrote architecture diagrams")
 
 
