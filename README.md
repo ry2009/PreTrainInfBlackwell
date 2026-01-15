@@ -196,6 +196,8 @@ Artifacts to review:
 - Poster (bigger model run): `artifacts/final_codeparrot_big_POSTER.png`
 - DDP smoke test: `artifacts/ddp_smoke.json` + `artifacts/ddp_smoke.png`
 - NVFP4 TE benchmarks: `artifacts/part2_benchmark.png` + `artifacts/part2_sweep.png`
+- Safety poster: `artifacts/safety_poster.png`
+- Safety metrics + plots: `artifacts/safety_suite.json`, `artifacts/safety_exchange.png`, `artifacts/safety_pareto.png`, `artifacts/safety_latency.png`
 
 ---
 

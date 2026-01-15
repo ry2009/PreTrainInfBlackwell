@@ -666,6 +666,9 @@ def run_safety_suite(
     val_labels = labels[val_idx].to(device).float()
     test_labels = labels[test_idx].to(device).float()
 
+    val_labels_cpu = labels[val_idx].cpu()
+    test_labels_cpu = labels[test_idx].cpu()
+
     class Block(nn.Module):
         def __init__(self):
             super().__init__()
@@ -780,10 +783,10 @@ def run_safety_suite(
     test_scores_output = score_model(output_model, test_output)
     test_scores_exchange = score_model(exchange_model, test_exchange)
 
-    val_attack = val_labels == 1
-    val_benign = val_labels == 0
-    test_attack = test_labels == 1
-    test_benign = test_labels == 0
+    val_attack = val_labels_cpu == 1
+    val_benign = val_labels_cpu == 0
+    test_attack = test_labels_cpu == 1
+    test_benign = test_labels_cpu == 0
 
     thresholds = {
         "input_only": threshold_for_fpr(val_scores_input[val_benign], target_fpr),
@@ -2004,6 +2007,8 @@ def main(
         except Exception as exc:
             print("Safety plots skipped:", exc)
     for precision in run_list:
+        if precision == "safety":
+            continue
         if precision in {"nvfp4", "bf16", "cooldown"}:
             result = train_tiny_transformer.remote(
                 precision=precision,
